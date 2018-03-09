@@ -1,0 +1,7 @@
+[package]
+name = "rirc_slack"
+version = "0.1.0"
+authors = ["tux3 <barrdetwix@gmail.com>"]
+
+[dependencies]
+rirc_server = { path = "../rirc_server" }

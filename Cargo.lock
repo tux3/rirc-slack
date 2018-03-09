@@ -1,0 +1,11 @@
+[[package]]
+name = "rirc_server"
+version = "0.1.0"
+
+[[package]]
+name = "rirc_slack"
+version = "0.1.0"
+dependencies = [
+ "rirc_server 0.1.0",
+]
+
