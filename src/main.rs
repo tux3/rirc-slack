@@ -1,10 +1,12 @@
 extern crate rirc_server;
 
-use rirc_server::Server;
+use rirc_server::{Server, ServerSettings};
 
 fn main() {
-    let addr = "0.0.0.0:6697".parse().unwrap();
-    let mut server = Server::new(addr);
+    let mut server = Server::new(ServerSettings {
+        listen_addr: "0.0.0.0:6697".parse().unwrap(),
+        server_name: "rIRC-slack-gateway".to_owned(),
+    });
 
     println!("rIRC Slack gateway");
 
