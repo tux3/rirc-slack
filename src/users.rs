@@ -1,6 +1,5 @@
 use std::sync::{RwLock};
-use std::collections::{HashMap, hash_map::Entry};
-use slack::Slack;
+use std::collections::{HashMap};
 
 lazy_static! {
     static ref GLOBAL_USERNAMES: RwLock<HashMap<String, String>>

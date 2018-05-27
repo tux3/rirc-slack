@@ -3,13 +3,13 @@ use serde_json::{Map, Value};
 use std::sync::{Arc};
 use hyper::{Response, StatusCode};
 use hyper::header::{ContentLength};
-use channels::get_channel;
+use channels::{get_irc_channel, ack_message_from_irc};
 use users::get_username;
 use rirc_server::{Message};
 use futures::Future;
 
 impl SlackAppServer {
-    pub(super) fn handle_url_verification(state: Arc<SlackAppServerState>, json: &Value) -> Response {
+    pub(super) fn handle_url_verification(_state: Arc<SlackAppServerState>, json: &Value) -> Response {
         let challenge = match json.get("challenge") {
             Some(v) if v.is_string() => v.as_str().unwrap().to_owned(),
             _ => return_error!(StatusCode::BadRequest, "Missing or invalid challenge field in request"),
@@ -37,7 +37,7 @@ impl SlackAppServer {
         }
     }
 
-    pub(super) fn handle_message_event_callback(state: Arc<SlackAppServerState>, event_object: &Map<String, Value>) -> Response {
+    pub(super) fn handle_message_event_callback(_state: Arc<SlackAppServerState>, event_object: &Map<String, Value>) -> Response {
         if event_object.contains_key("subtype") {
             println!("Received unhandled message event with subtype: {:?}", event_object);
             return Response::new();
@@ -58,11 +58,21 @@ impl SlackAppServer {
             _ => return_error!(StatusCode::BadRequest, "Missing or invalid text field in message event"),
         };
 
-        println!("Received message '{}' from {} in channel {}", text, user, channel);
+        let ts = match event_object.get("ts") {
+            Some(v) if v.is_string() => v.as_str().unwrap(),
+            _ => return_error!(StatusCode::BadRequest, "Missing or invalid ts field in message event"),
+        };
+
+        if ack_message_from_irc(&channel, ts) {
+            // If the message comes from IRC, whoever's connected to the server already received it!
+            return Response::new();
+        }
+
+        println!("Received message '{}' ts {} from {} in channel {}", text, ts, user, channel);
 
         let username = get_username(user).unwrap_or(user.to_owned());
 
-        if let Some(channel) = get_channel(&channel) {
+        if let Some(channel) = get_irc_channel(&channel) {
             let channel_guard = channel.write().expect("Channel write lock broken!");
             // FIXME: We're supposed to reply to Slack under 3s, so waiting on the send to each client of the channel is a bit counterproductive...
             channel_guard.send(Message {

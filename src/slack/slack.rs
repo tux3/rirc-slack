@@ -30,6 +30,16 @@ impl Slack {
         Ok(())
     }
 
+    pub fn post_message(&self, channel: &str, message: &str) -> Result<(String), Box<Error>> {
+        let params = [
+            ("channel", Value::from(channel)),
+            ("text", Value::from(message)),
+            ("as_user", Value::from(true)),
+        ];
+        let mut json = self.http_client.api_call("chat.postMessage", &params)?;
+        Ok(serde_json::from_value(json["ts"].take()).unwrap())
+    }
+
     // NOTE: Won't return archived channels
     pub fn channels_list(&self) -> Result<Vec<Channel>, Box<Error>> {
         let mut result = Vec::new();

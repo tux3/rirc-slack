@@ -17,7 +17,6 @@ mod channels;
 mod users;
 
 use rirc_server::{Server, ServerSettings};
-use slack::{Slack, Channel};
 use std::error::Error;
 use client::get_server_callbacks;
 use server::SlackAppServer;

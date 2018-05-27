@@ -4,10 +4,10 @@ use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std::error::Error;
 use std::thread;
-use rirc_server::{ServerCallbacks, Client as IRCClient};
+use rirc_server::{ServerCallbacks, Client as IRCClient, Channel as IRCChannel, Message as IRCMsg};
 use settings::GLOBAL_SETTINGS;
 use settings::UserProfile;
-use channels::register_channel;
+use channels::{register_channel, get_channel_id, mark_message_from_irc};
 use users::register_username;
 
 lazy_static! {
@@ -88,11 +88,33 @@ fn on_client_disconnect(addr: &SocketAddr) -> Result<(), Box<Error>> {
     Ok(())
 }
 
+fn on_client_channel_message(client: &IRCClient, chan: &IRCChannel, msg: &IRCMsg) -> Result<bool, Box<Error>> {
+    let msg_text = msg.params.iter().skip(1).map(|s| &**s).collect::<Vec<&str>>().join(" ");
+
+    let channel_id = match get_channel_id(&chan.name) {
+        Some(channel_id) => channel_id,
+        None => return Err(From::from("Couldn't find matching Slack channel for IRC message")),
+    };
+
+    let clients = GLOBAL_CLIENTS.read()?;
+    let client = match clients.get(&client.addr) {
+        Some(client) => client,
+        _ => return Err(From::from("Client sent message, but isn't in our list!")),
+    };
+
+    let msg_ts = client.slack.post_message(&channel_id, &msg_text)?;
+
+    // Mark the message we just sent as coming from IRC, so we ignore it when Slack sends it back
+    mark_message_from_irc(&channel_id, msg_ts);
+    Ok(true)
+}
+
 pub fn get_server_callbacks() -> ServerCallbacks {
     ServerCallbacks {
         on_client_registering,
         on_client_registered,
         on_client_disconnect,
+        on_client_channel_message,
         ..Default::default()
     }
 }
