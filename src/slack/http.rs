@@ -1,9 +1,11 @@
 static API_BASE: &str = "https://slack.com/api/";
 
 use reqwest::{Client, ClientBuilder, header};
+use reqwest::header::HeaderMap;
 use serde::ser::Serialize;
 use serde_json::{Value};
 use std::error::Error;
+use hyper::header::HeaderValue;
 
 pub struct SlackHttpClient {
     client: Client,
@@ -11,8 +13,8 @@ pub struct SlackHttpClient {
 
 impl SlackHttpClient {
     pub fn new(auth_token: &str) -> SlackHttpClient {
-        let mut headers = header::Headers::new();
-        headers.set(header::Authorization("Bearer ".to_string()+auth_token));
+        let mut headers = HeaderMap::new();
+        headers.insert(header::AUTHORIZATION, HeaderValue::from_str(&("Bearer ".to_string()+auth_token)).unwrap());
 
         let client = ClientBuilder::new()
             .default_headers(headers)
@@ -23,14 +25,14 @@ impl SlackHttpClient {
         }
     }
 
-    pub fn api_call<T: Serialize + ?Sized>(&self, endpoint: &str, params: &T) -> Result<Value, Box<Error>> {
-        let mut res = self.client.post(&(API_BASE.to_string()+endpoint))
+    pub async fn api_call<T: Serialize + ?Sized>(&self, endpoint: &str, params: &T) -> Result<Value, Box<dyn Error + Send + Sync>> {
+        let res = self.client.post(&(API_BASE.to_string()+endpoint))
             .form(params)
-            .send()?;
+            .send().await?;
         if !res.status().is_success() {
             return Err(From::from("Request failed with status ".to_owned()+&res.status().to_string()))
         }
-        let json: Value = res.json()?;
+        let json: Value = res.json().await?;
         let obj = match json.as_object() {
             Some(obj) => obj.to_owned(),
             _ => return Err(From::from("JSON response is not an object")),

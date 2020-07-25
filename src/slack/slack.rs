@@ -18,30 +18,30 @@ impl Slack {
     }
 
     #[allow(dead_code)]
-    pub fn test_request(&self) -> Result<(), Box<Error>> {
-        self.http_client.api_call::<[(&str, &str)]>("api.test", &[])?;
+    pub async fn test_request(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        self.http_client.api_call::<[(&str, &str)]>("api.test", &[]).await?;
         Ok(())
     }
 
     #[allow(dead_code)]
-    pub fn test_auth(&self) -> Result<(), Box<Error>> {
+    pub async fn test_auth(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         let params = [("token", &self.token)];
-        self.http_client.api_call("auth.test", &params)?;
+        self.http_client.api_call("auth.test", &params).await?;
         Ok(())
     }
 
-    pub fn post_message(&self, channel: &str, message: &str) -> Result<(String), Box<Error>> {
+    pub async fn post_message(&self, channel: &str, message: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
         let params = [
             ("channel", Value::from(channel)),
             ("text", Value::from(message)),
             ("as_user", Value::from(true)),
         ];
-        let mut json = self.http_client.api_call("chat.postMessage", &params)?;
+        let mut json = self.http_client.api_call("chat.postMessage", &params).await?;
         Ok(serde_json::from_value(json["ts"].take()).unwrap())
     }
 
     // NOTE: Won't return archived channels
-    pub fn channels_list(&self) -> Result<Vec<Channel>, Box<Error>> {
+    pub async fn channels_list(&self) -> Result<Vec<Channel>, Box<dyn Error + Send + Sync>> {
         let mut result = Vec::new();
         let mut next_cursor = None;
 
@@ -53,7 +53,7 @@ impl Slack {
                 [("exclude_archived", Value::from(true)), ("exclude_members", Value::from(true)),
                     ("limit", Value::from(500)), ("cursor", Value::from(""))]
             };
-            let mut json = self.http_client.api_call("channels.list", &params)?;
+            let mut json = self.http_client.api_call("channels.list", &params).await?;
             let jchannels = json["channels"].take();
             let mut next_channels = serde_json::from_value(jchannels)?;
             result.append(&mut next_channels);
@@ -72,7 +72,7 @@ impl Slack {
         Ok(result)
     }
 
-    pub fn users_list(&self) -> Result<Vec<UserInfo>, Box<Error>> {
+    pub async fn users_list(&self) -> Result<Vec<UserInfo>, Box<dyn Error + Send + Sync>> {
         let mut result = Vec::new();
         let mut next_cursor = None;
 
@@ -82,7 +82,7 @@ impl Slack {
             } else {
                 [("limit", Value::from(500)), ("cursor", Value::from(""))]
             };
-            let mut json = self.http_client.api_call("users.list", &params)?;
+            let mut json = self.http_client.api_call("users.list", &params).await?;
             let jmembers = json["members"].take();
             let mut next_members = serde_json::from_value(jmembers)?;
             result.append(&mut next_members);

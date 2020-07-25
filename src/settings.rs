@@ -50,7 +50,7 @@ fn get_settings_file_path() -> String {
     home+"/"+CONFIG_FILE_RELPATH
 }
 
-fn read_settings() -> Result<Settings, Box<Error>> {
+fn read_settings() -> Result<Settings, Box<dyn Error>> {
     let mut file : File = File::open(get_settings_file_path())?;
     let contents = &mut String::new();
     file.read_to_string(contents)?;
@@ -69,7 +69,8 @@ fn read_settings() -> Result<Settings, Box<Error>> {
     })
 }
 
-pub fn save_settings() -> Result<(), Box<Error>> {
+#[allow(dead_code)]
+pub fn save_settings() -> Result<(), Box<dyn Error>> {
     let settings = GLOBAL_SETTINGS.read()?;
 
     let mut file = File::create(get_settings_file_path())?;

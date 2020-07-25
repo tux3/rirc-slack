@@ -1,5 +1,6 @@
 use rirc_server;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use std::collections::HashMap;
 
 // Max number of IRC messages waiting to get ACK'd before we start removing the older oness
@@ -14,37 +15,37 @@ lazy_static! {
                         = RwLock::new(HashMap::new());
 }
 
-pub fn register_channel(slack_channel_id: String, channel: Arc<RwLock<rirc_server::Channel>>) {
+pub async fn register_channel(slack_channel_id: String, channel: Arc<RwLock<rirc_server::Channel>>) {
     {
-        let channel_guard = channel.read().expect("Channel read lock");
-        let mut channel_ids_guard = GLOBAL_CHANNELS_ID.write().expect("Channel IDs write lock");
+        let channel_guard = channel.read().await;
+        let mut channel_ids_guard = GLOBAL_CHANNELS_ID.write().await;
         channel_ids_guard.insert(channel_guard.name.clone(), slack_channel_id.clone());
     }
 
     {
-        let mut channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.write().expect("Channel IRC msgs write lock");
+        let mut channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.write().await;
         channel_msgs_guard.insert(slack_channel_id.clone(), RwLock::new(Vec::new()));
     }
 
     {
-        let mut channels_guard = GLOBAL_CHANNELS.write().expect("Channels write lock");
+        let mut channels_guard = GLOBAL_CHANNELS.write().await;
         channels_guard.insert(slack_channel_id, channel);
     }
 }
 
-pub fn get_channel_id(irc_channel_name: &str) -> Option<String> {
-    let channel_ids_guard = GLOBAL_CHANNELS_ID.read().expect("Channels read lock");
+pub async fn get_channel_id(irc_channel_name: &str) -> Option<String> {
+    let channel_ids_guard = GLOBAL_CHANNELS_ID.read().await;
     channel_ids_guard.get(irc_channel_name).map(|a| a.clone())
 }
 
-pub fn get_irc_channel(slack_channel_id: &str) -> Option<Arc<RwLock<rirc_server::Channel>>> {
-    let channels_guard = GLOBAL_CHANNELS.read().expect("Channels read lock");
+pub async fn get_irc_channel(slack_channel_id: &str) -> Option<Arc<RwLock<rirc_server::Channel>>> {
+    let channels_guard = GLOBAL_CHANNELS.read().await;
     channels_guard.get(slack_channel_id).map(|a| a.clone())
 }
 
-pub fn mark_message_from_irc(slack_channel_id: &str, msg_ts: String) {
-    let channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.read().expect("Channels IRC msgs map read lock");
-    let mut msgs_guard = channel_msgs_guard.get(slack_channel_id).unwrap().write().unwrap();
+pub async fn mark_message_from_irc(slack_channel_id: &str, msg_ts: String) {
+    let channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.read().await;
+    let mut msgs_guard = channel_msgs_guard.get(slack_channel_id).unwrap().write().await;
     msgs_guard.push(msg_ts);
 
     if msgs_guard.len() > MAX_MSGS_FROM_IRC_BUFFER {
@@ -53,9 +54,9 @@ pub fn mark_message_from_irc(slack_channel_id: &str, msg_ts: String) {
 }
 
 // Returns true if the message was really sent from IRC
-pub fn ack_message_from_irc(slack_channel_id: &str, msg_ts: &str) -> bool {
-    let channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.read().expect("Channels IRC msgs map read lock");
-    let mut msgs_guard = channel_msgs_guard.get(slack_channel_id).unwrap().write().unwrap();
+pub async fn ack_message_from_irc(slack_channel_id: &str, msg_ts: &str) -> bool {
+    let channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.read().await;
+    let mut msgs_guard = channel_msgs_guard.get(slack_channel_id).unwrap().write().await;
 
     let pos = match msgs_guard.iter().position(|x| *x == *msg_ts) {
         Some(x) => x,
