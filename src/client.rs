@@ -1,18 +1,18 @@
-use crate::slack::Slack;
-use crate::settings::GLOBAL_SETTINGS;
+use crate::channels::{get_channel_id, mark_message_from_irc, register_channel};
 use crate::settings::UserProfile;
-use crate::channels::{register_channel, get_channel_id, mark_message_from_irc};
+use crate::settings::GLOBAL_SETTINGS;
+use crate::slack::Slack;
 use crate::users::register_username;
-use std::net::SocketAddr;
-use std::sync::{Arc, RwLock};
+use futures::executor::block_on;
+use rirc_server::{Channel as IRCChannel, Client as IRCClient, Message as IRCMsg, ServerCallbacks};
 use std::collections::HashMap;
 use std::error::Error;
-use rirc_server::{ServerCallbacks, Client as IRCClient, Channel as IRCChannel, Message as IRCMsg};
-use futures::executor::block_on;
+use std::net::SocketAddr;
+use std::sync::{Arc, RwLock};
 
 lazy_static! {
-    pub static ref GLOBAL_CLIENTS: Arc<RwLock<HashMap<SocketAddr, Client>>>
-                        = Arc::new(RwLock::new(HashMap::new()));
+    pub static ref GLOBAL_CLIENTS: Arc<RwLock<HashMap<SocketAddr, Client>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 }
 
 pub struct Client {
@@ -37,7 +37,11 @@ fn on_client_registering(irc_client: &mut IRCClient) -> Result<bool, Box<dyn Err
     let settings = GLOBAL_SETTINGS.read().unwrap();
     let profile = match settings.user_profiles.get(&nick) {
         Some(profile) => profile,
-        _ => return Err(From::from("Your nick is not registered with the Slack gateway!")),
+        _ => {
+            return Err(From::from(
+                "Your nick is not registered with the Slack gateway!",
+            ))
+        }
     };
 
     println!("Registering: {} ({})", irc_client.addr, nick);
@@ -64,14 +68,18 @@ fn on_client_registered(irc_client: &IRCClient) -> Result<(), Box<dyn Error + Se
         }
     });
 
-    block_on(client.slack.channels_list())?.into_iter()
+    block_on(client.slack.channels_list())?
+        .into_iter()
         .filter(|c| c.is_member)
         .for_each(|channel| {
             let irc_chan_name = "#".to_owned() + &channel.name;
             let _ = block_on(irc_client.join(&irc_chan_name));
             let client_channels_guard = block_on(irc_client.channels.read());
             if let Some(irc_chan) = client_channels_guard.get(&irc_chan_name.to_ascii_uppercase()) {
-                block_on(register_channel(channel.id.clone(), irc_chan.upgrade().unwrap()));
+                block_on(register_channel(
+                    channel.id.clone(),
+                    irc_chan.upgrade().unwrap(),
+                ));
             }
         });
 
@@ -86,12 +94,26 @@ fn on_client_disconnect(addr: &SocketAddr) -> Result<(), Box<dyn Error + Send + 
     Ok(())
 }
 
-fn on_client_channel_message(client: &IRCClient, chan: &IRCChannel, msg: &IRCMsg) -> Result<bool, Box<dyn Error + Send + Sync>> {
-    let msg_text = msg.params.iter().skip(1).map(|s| &**s).collect::<Vec<&str>>().join(" ");
+fn on_client_channel_message(
+    client: &IRCClient,
+    chan: &IRCChannel,
+    msg: &IRCMsg,
+) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    let msg_text = msg
+        .params
+        .iter()
+        .skip(1)
+        .map(|s| &**s)
+        .collect::<Vec<&str>>()
+        .join(" ");
 
     let channel_id = match block_on(get_channel_id(&chan.name)) {
         Some(channel_id) => channel_id,
-        None => return Err(From::from("Couldn't find matching Slack channel for IRC message")),
+        None => {
+            return Err(From::from(
+                "Couldn't find matching Slack channel for IRC message",
+            ))
+        }
     };
 
     let clients = GLOBAL_CLIENTS.read().unwrap();

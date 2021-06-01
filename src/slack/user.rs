@@ -1,4 +1,3 @@
-
 #[derive(Deserialize)]
 pub struct UserInfo {
     pub id: String,

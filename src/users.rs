@@ -1,9 +1,8 @@
-use std::sync::{RwLock};
-use std::collections::{HashMap};
+use std::collections::HashMap;
+use std::sync::RwLock;
 
 lazy_static! {
-    static ref GLOBAL_USERNAMES: RwLock<HashMap<String, String>>
-                        = RwLock::new(HashMap::new());
+    static ref GLOBAL_USERNAMES: RwLock<HashMap<String, String>> = RwLock::new(HashMap::new());
 }
 
 pub fn register_username(slack_user_id: String, username: String) {

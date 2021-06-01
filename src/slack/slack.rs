@@ -1,8 +1,8 @@
-use super::http::{SlackHttpClient};
+use super::http::SlackHttpClient;
 use super::{Channel, UserInfo};
-use std::vec::Vec;
-use std::error::Error;
 use serde_json::{self, Value};
+use std::error::Error;
+use std::vec::Vec;
 
 pub struct Slack {
     token: String,
@@ -14,12 +14,14 @@ impl Slack {
         return Slack {
             token: token.to_owned(),
             http_client: SlackHttpClient::new(token),
-        }
+        };
     }
 
     #[allow(dead_code)]
     pub async fn test_request(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
-        self.http_client.api_call::<[(&str, &str)]>("api.test", &[]).await?;
+        self.http_client
+            .api_call::<[(&str, &str)]>("api.test", &[])
+            .await?;
         Ok(())
     }
 
@@ -30,13 +32,20 @@ impl Slack {
         Ok(())
     }
 
-    pub async fn post_message(&self, channel: &str, message: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
+    pub async fn post_message(
+        &self,
+        channel: &str,
+        message: &str,
+    ) -> Result<String, Box<dyn Error + Send + Sync>> {
         let params = [
             ("channel", Value::from(channel)),
             ("text", Value::from(message)),
             ("as_user", Value::from(true)),
         ];
-        let mut json = self.http_client.api_call("chat.postMessage", &params).await?;
+        let mut json = self
+            .http_client
+            .api_call("chat.postMessage", &params)
+            .await?;
         Ok(serde_json::from_value(json["ts"].take()).unwrap())
     }
 
@@ -47,11 +56,19 @@ impl Slack {
 
         loop {
             let params = if let Some(cursor) = next_cursor {
-                [("exclude_archived", Value::from(true)), ("exclude_members", Value::from(true)),
-                    ("limit", Value::from(500)), ("cursor", Value::from(cursor))]
+                [
+                    ("exclude_archived", Value::from(true)),
+                    ("exclude_members", Value::from(true)),
+                    ("limit", Value::from(500)),
+                    ("cursor", Value::from(cursor)),
+                ]
             } else {
-                [("exclude_archived", Value::from(true)), ("exclude_members", Value::from(true)),
-                    ("limit", Value::from(500)), ("cursor", Value::from(""))]
+                [
+                    ("exclude_archived", Value::from(true)),
+                    ("exclude_members", Value::from(true)),
+                    ("limit", Value::from(500)),
+                    ("cursor", Value::from("")),
+                ]
             };
             let mut json = self.http_client.api_call("channels.list", &params).await?;
             let jchannels = json["channels"].take();

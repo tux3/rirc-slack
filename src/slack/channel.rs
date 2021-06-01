@@ -1,4 +1,3 @@
-
 #[derive(Deserialize)]
 pub struct Channel {
     pub id: String,

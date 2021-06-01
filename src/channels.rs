@@ -1,21 +1,23 @@
 use rirc_server;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::collections::HashMap;
 
 // Max number of IRC messages waiting to get ACK'd before we start removing the older oness
 const MAX_MSGS_FROM_IRC_BUFFER: usize = 64;
 
 lazy_static! {
-    static ref GLOBAL_CHANNELS: RwLock<HashMap<String, Arc<RwLock<rirc_server::Channel>>>>
-                        = RwLock::new(HashMap::new());
-    static ref GLOBAL_CHANNELS_MSGS_FROM_IRC: RwLock<HashMap<String, RwLock<Vec<String>>>>
-                        = RwLock::new(HashMap::new());
-    static ref GLOBAL_CHANNELS_ID: RwLock<HashMap<String, String>>
-                        = RwLock::new(HashMap::new());
+    static ref GLOBAL_CHANNELS: RwLock<HashMap<String, Arc<RwLock<rirc_server::Channel>>>> =
+        RwLock::new(HashMap::new());
+    static ref GLOBAL_CHANNELS_MSGS_FROM_IRC: RwLock<HashMap<String, RwLock<Vec<String>>>> =
+        RwLock::new(HashMap::new());
+    static ref GLOBAL_CHANNELS_ID: RwLock<HashMap<String, String>> = RwLock::new(HashMap::new());
 }
 
-pub async fn register_channel(slack_channel_id: String, channel: Arc<RwLock<rirc_server::Channel>>) {
+pub async fn register_channel(
+    slack_channel_id: String,
+    channel: Arc<RwLock<rirc_server::Channel>>,
+) {
     {
         let channel_guard = channel.read().await;
         let mut channel_ids_guard = GLOBAL_CHANNELS_ID.write().await;
@@ -45,7 +47,11 @@ pub async fn get_irc_channel(slack_channel_id: &str) -> Option<Arc<RwLock<rirc_s
 
 pub async fn mark_message_from_irc(slack_channel_id: &str, msg_ts: String) {
     let channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.read().await;
-    let mut msgs_guard = channel_msgs_guard.get(slack_channel_id).unwrap().write().await;
+    let mut msgs_guard = channel_msgs_guard
+        .get(slack_channel_id)
+        .unwrap()
+        .write()
+        .await;
     msgs_guard.push(msg_ts);
 
     if msgs_guard.len() > MAX_MSGS_FROM_IRC_BUFFER {
@@ -56,7 +62,11 @@ pub async fn mark_message_from_irc(slack_channel_id: &str, msg_ts: String) {
 // Returns true if the message was really sent from IRC
 pub async fn ack_message_from_irc(slack_channel_id: &str, msg_ts: &str) -> bool {
     let channel_msgs_guard = GLOBAL_CHANNELS_MSGS_FROM_IRC.read().await;
-    let mut msgs_guard = channel_msgs_guard.get(slack_channel_id).unwrap().write().await;
+    let mut msgs_guard = channel_msgs_guard
+        .get(slack_channel_id)
+        .unwrap()
+        .write()
+        .await;
 
     let pos = match msgs_guard.iter().position(|x| *x == *msg_ts) {
         Some(x) => x,
