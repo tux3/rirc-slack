@@ -1,4 +1,3 @@
-use rirc_server;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -37,12 +36,12 @@ pub async fn register_channel(
 
 pub async fn get_channel_id(irc_channel_name: &str) -> Option<String> {
     let channel_ids_guard = GLOBAL_CHANNELS_ID.read().await;
-    channel_ids_guard.get(irc_channel_name).map(|a| a.clone())
+    channel_ids_guard.get(irc_channel_name).cloned()
 }
 
 pub async fn get_irc_channel(slack_channel_id: &str) -> Option<Arc<RwLock<rirc_server::Channel>>> {
     let channels_guard = GLOBAL_CHANNELS.read().await;
-    channels_guard.get(slack_channel_id).map(|a| a.clone())
+    channels_guard.get(slack_channel_id).cloned()
 }
 
 pub async fn mark_message_from_irc(slack_channel_id: &str, msg_ts: String) {

@@ -52,6 +52,6 @@ impl SlackHttpClient {
                 "Request failed with error ".to_owned() + &err.to_string(),
             ));
         }
-        return Ok(json);
+        Ok(json)
     }
 }

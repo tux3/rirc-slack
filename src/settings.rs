@@ -1,4 +1,3 @@
-use serde_json;
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
@@ -6,11 +5,11 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::sync::{Arc, RwLock};
 
-static CONFIG_FILE_RELPATH: &'static str = ".config/rirc_slack.json";
+static CONFIG_FILE_RELPATH: &str = ".config/rirc_slack.json";
 
 lazy_static! {
     pub static ref GLOBAL_SETTINGS: Arc<RwLock<Settings>> =
-        Arc::new(RwLock::new(read_settings().unwrap_or(Settings::default())));
+        Arc::new(RwLock::new(read_settings().unwrap_or_default()));
 }
 
 #[derive(Serialize, Deserialize, Clone)]

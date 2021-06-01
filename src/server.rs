@@ -16,6 +16,8 @@ macro_rules! return_error {
     }};
 }
 
+mod handlers;
+
 pub(super) struct SlackAppServerState {
     verif_token: String,
 }

@@ -9,9 +9,10 @@ extern crate lazy_static;
 extern crate futures;
 extern crate hyper;
 
+#[macro_use]
+mod server;
 mod channels;
 mod client;
-mod server;
 mod settings;
 mod slack;
 mod users;

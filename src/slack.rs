@@ -1,8 +1,14 @@
-use super::http::SlackHttpClient;
-use super::{Channel, UserInfo};
+use http::SlackHttpClient;
 use serde_json::{self, Value};
 use std::error::Error;
 use std::vec::Vec;
+
+mod channel;
+mod http;
+mod user;
+
+pub use self::channel::Channel;
+pub use self::user::UserInfo;
 
 pub struct Slack {
     token: String,
@@ -11,10 +17,10 @@ pub struct Slack {
 
 impl Slack {
     pub fn new(token: &str) -> Slack {
-        return Slack {
+        Slack {
             token: token.to_owned(),
             http_client: SlackHttpClient::new(token),
-        };
+        }
     }
 
     #[allow(dead_code)]

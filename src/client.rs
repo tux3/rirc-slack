@@ -77,7 +77,7 @@ fn on_client_registered(irc_client: &IRCClient) -> Result<(), Box<dyn Error + Se
             let client_channels_guard = block_on(irc_client.channels.read());
             if let Some(irc_chan) = client_channels_guard.get(&irc_chan_name.to_ascii_uppercase()) {
                 block_on(register_channel(
-                    channel.id.clone(),
+                    channel.id,
                     irc_chan.upgrade().unwrap(),
                 ));
             }

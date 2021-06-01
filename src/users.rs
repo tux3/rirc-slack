@@ -12,5 +12,5 @@ pub fn register_username(slack_user_id: String, username: String) {
 
 pub fn get_username(slack_user_id: &str) -> Option<String> {
     let users_guard = GLOBAL_USERNAMES.read().expect("Usernames read lock");
-    users_guard.get(slack_user_id).map(|a| a.clone())
+    users_guard.get(slack_user_id).cloned()
 }

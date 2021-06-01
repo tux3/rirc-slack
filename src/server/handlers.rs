@@ -1,5 +1,5 @@
+use super::{SlackAppServerState, SlackAppServer};
 use crate::channels::{ack_message_from_irc, get_irc_channel};
-use crate::server::{server::SlackAppServerState, SlackAppServer};
 use crate::users::get_username;
 use hyper::{Body, Response, StatusCode};
 use rirc_server::Message;
@@ -107,7 +107,7 @@ impl SlackAppServer {
             text, ts, user, channel
         );
 
-        let username = get_username(user).unwrap_or(user.to_owned());
+        let username = get_username(user).unwrap_or_else(|| user.to_owned());
 
         if let Some(channel) = get_irc_channel(&channel).await {
             let text = text.to_owned();
